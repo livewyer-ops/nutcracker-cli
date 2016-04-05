@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
-	"io"
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -11,7 +13,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"crypto/tls"
+	"github.com/nutmegdevelopment/nutcracker/secrets"
 )
 
 const (
@@ -29,10 +31,15 @@ func getSecret(c *cli.Context) {
 	u := url.URL{
 		Host:   server,
 		Scheme: "https",
-		Path:   "/secrets/view/" + c.String("name"),
+		Path:   "/secrets/view",
 	}
 
-	req, err := http.NewRequest("GET", u.String(), nil)
+	reqBody, err := json.Marshal(&map[string]string{"name": c.String("name")})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,10 +48,10 @@ func getSecret(c *cli.Context) {
 	req.Header.Add("X-Secret-Key", key)
 
 	client := &http.Client{
-        Transport: &http.Transport{
-            TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-        },
-    }
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
@@ -71,9 +78,9 @@ func getSecret(c *cli.Context) {
 			log.Fatal(err)
 		}
 
-		log.Printf("%s\n", decoded)
+		fmt.Printf("%s\n", decoded)
 	} else {
-		log.Printf("%s\n", secret)
+		fmt.Printf("%s\n", secret)
 	}
 }
 
@@ -93,10 +100,10 @@ func listSecrets(c *cli.Context) {
 	req.Header.Add("X-Secret-Key", key)
 
 	client := &http.Client{
-        Transport: &http.Transport{
-            TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-        },
-    }
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
@@ -106,15 +113,17 @@ func listSecrets(c *cli.Context) {
 		log.Fatal(resp.Status)
 	}
 
-	for {
-		data := make([]byte, 4<<10) // Read 4KB at a time
-		_, err := resp.Body.Read(data)
-		if err == io.EOF {
-			break
-		} else if err != nil {
+	dec := json.NewDecoder(resp.Body)
+
+	for dec.More() {
+		var recv []secrets.Secret
+		err = dec.Decode(&recv)
+		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("%s\n", data)
+		for i := range recv {
+			fmt.Println(recv[i].Name)
+		}
 	}
 
 	err = resp.Body.Close()

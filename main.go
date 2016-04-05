@@ -71,9 +71,9 @@ func getSecret(c *cli.Context) {
 	}
 
 	// Decode secret if base64 encoded
-	if bytes.Compare(secret[0:8], []byte(base64ID)) == 0 {
-		var decoded []byte
-		_, err = base64.StdEncoding.Decode(decoded, secret)
+	if len(secret) > 8 && bytes.Compare(secret[0:8], []byte(base64ID)) == 0 {
+		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(secret)-8))
+		_, err = base64.StdEncoding.Decode(decoded, secret[8:])
 		if err != nil {
 			log.Fatal(err)
 		}

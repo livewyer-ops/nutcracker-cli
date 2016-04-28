@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	"encoding/base64"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,9 +25,14 @@ var (
 	server string
 	key    string
 	id     string
+	debug  bool
 )
 
 func getSecret(c *cli.Context) {
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	u := url.URL{
 		Host:   server,
 		Scheme: "https",
@@ -39,6 +44,7 @@ func getSecret(c *cli.Context) {
 		log.Fatal(err)
 	}
 
+	log.Debug("Request URI: ", u.String())
 	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Fatal(err)
@@ -72,6 +78,7 @@ func getSecret(c *cli.Context) {
 
 	// Decode secret if base64 encoded
 	if len(secret) > 8 && bytes.Compare(secret[0:8], []byte(base64ID)) == 0 {
+		log.Debug("Decoding base64 secret")
 		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(secret)-8))
 		_, err = base64.StdEncoding.Decode(decoded, secret[8:])
 		if err != nil {
@@ -85,12 +92,22 @@ func getSecret(c *cli.Context) {
 }
 
 func listSecrets(c *cli.Context) {
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	u := url.URL{
 		Host:   server,
 		Scheme: "https",
-		Path:   "/secrets/list/secrets",
 	}
 
+	if c.Bool("all") {
+		u.Path = "/secrets/list/secrets"
+	} else {
+		u.Path = fmt.Sprintf("/secrets/list/key/%s", id)
+	}
+
+	log.Debug("Request URI: ", u.String())
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -122,6 +139,7 @@ func listSecrets(c *cli.Context) {
 			log.Fatal(err)
 		}
 		for i := range recv {
+			log.Debug(recv[i])
 			fmt.Println(recv[i].Name)
 		}
 	}
@@ -153,6 +171,11 @@ func main() {
 			Usage:       "Nutcracker API key",
 			Destination: &key,
 		},
+		cli.BoolFlag{
+			Name:        "debug, d",
+			Usage:       "Debug output",
+			Destination: &debug,
+		},
 	}
 	app.Commands = []cli.Command{
 		{
@@ -170,8 +193,14 @@ func main() {
 		{
 			Name:    "list",
 			Aliases: []string{"l"},
-			Usage:   "list all secrets",
+			Usage:   "list available secrets",
 			Action:  listSecrets,
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "all, a",
+					Usage: "list all secrets",
+				},
+			},
 		},
 	}
 

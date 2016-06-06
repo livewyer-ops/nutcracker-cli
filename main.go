@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	version  = "0.0.2"
+	version  = "0.0.3"
 	base64ID = "$base64$"
 )
 
@@ -80,12 +80,12 @@ func getSecret(c *cli.Context) {
 	if len(secret) > 8 && bytes.Compare(secret[0:8], []byte(base64ID)) == 0 {
 		log.Debug("Decoding base64 secret")
 		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(secret)-8))
-		_, err = base64.StdEncoding.Decode(decoded, secret[8:])
+		n, err := base64.StdEncoding.Decode(decoded, secret[8:])
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("%s\n", decoded)
+		fmt.Printf("%s\n", decoded[:n])
 	} else {
 		fmt.Printf("%s\n", secret)
 	}

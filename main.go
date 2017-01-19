@@ -28,7 +28,7 @@ var (
 	debug  bool
 )
 
-func getSecret(c *cli.Context) {
+func getSecret(c *cli.Context) error {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -89,9 +89,11 @@ func getSecret(c *cli.Context) {
 	} else {
 		fmt.Printf("%s\n", secret)
 	}
+
+	return err
 }
 
-func listSecrets(c *cli.Context) {
+func listSecrets(c *cli.Context) error {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -148,6 +150,8 @@ func listSecrets(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	return err
 }
 
 func main() {

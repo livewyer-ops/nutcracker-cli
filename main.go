@@ -1,4 +1,4 @@
-package main
+package main // import "github.com/nutmegdevelopment/nutcracker-cli"
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	version  = "0.0.3"
+	version  = "0.0.4"
 	base64ID = "$base64$"
 )
 
